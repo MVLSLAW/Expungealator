@@ -2,6 +2,10 @@
 Thumbs.db
 ehthumbs.db
 
+cgrab.php
+.idea
+__pycache__
+
 # Folder config file
 Desktop.ini
 
