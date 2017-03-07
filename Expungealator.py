@@ -14,7 +14,7 @@ class Expungealator:
     def __init__(self):
         #Populate dispolist with dispositions CSV File to useable dictionary
         #Not sure if it would be faster to search for each disposition each time.
-        reader = csv.DictReader(open('DispositionsList.csv'))
+        reader = csv.DictReader(open('csv files/DispositionsList.csv'))
         for line in reader:
             self.dispolist[line['Raw']] =  line['Converted']
     def addCharge(self,description,disposition,dispodate):
@@ -180,7 +180,7 @@ class Expungealator:
         return False #Means we couldn't convert the date
     def itemInCSV(self,csvname,item):
         #Check a single column csv for an item
-        reader = csv.DictReader(open(csvname + '.csv'))
+        reader = csv.DictReader(open('csv files/' + csvname + '.csv'))
         for line in reader:
             if(item.upper() == line['Description'].upper()):
                 return True

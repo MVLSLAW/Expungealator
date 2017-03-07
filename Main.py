@@ -5,8 +5,8 @@ from Expungealator import Expungealator
 import sys, json
 jsontest = '[{"Description":"FUGITIVE FROM JUSTICE -- VA","Disposition":"DISMISSED","DispositionDate":"2005-04-22"},{"Description":"RESISTING ARREST","Disposition":"STET","DispositionDate":"1992-09-02"},{"Description":"MAL DEST PROP\/VALU LESS 300","Disposition":"STET","DispositionDate":"1992-09-02"}]'
 
-#chargearray = json.loads(jsontest)
-chargearray = json.loads(sys.argv[1])
+chargearray = json.loads(jsontest)
+#chargearray = json.loads(sys.argv[1])
 
 Expunge = Expungealator()
 for charge in chargearray:
