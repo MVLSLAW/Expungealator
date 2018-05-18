@@ -17,10 +17,10 @@ for charge in chargearray:
 result = Expunge.checkExpungementRegular()
 </pre>
 
-##Coming Soon
+## Coming Soon
 - Shielding
 - Justice Reinvestment Act Expungeabilty
 
-##Needed Help
+## Needed Help
 Much of the determination for whether a charge description is a DUI or a marijuana case is done by comparing it to a master list. While we capture lots of possible ways to spell the various ways,
 we need some help in checking to make sure we got all of them.
