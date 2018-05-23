@@ -1,7 +1,9 @@
 # Expungealator
 Used to determine expungeability for Maryland Criminal Cases
+## Updates
+I have started to add JRA crimes and search by CJIS code example. It checks a large CSV file for matches but more testing needs to be done.
 
-##Usage
+## Usage
 The Expungealator class needs 3 variables. The description, disposition, and the disposition date of each charge in a case. The "Main.py" is an example of how to use the class. Main.py adds
 several charges to an expungealator object. It then runs the function checkExpungementRegular() which returns whether the case is eligible or not. Note that you can get the result of each
 charge by calling the getAllCharges() function. This has some added benefits like the ExpungementRegularCode which will tell you exactly what category the program put that charge into. This can be useful
@@ -24,3 +26,5 @@ result = Expunge.checkExpungementRegular()
 ## Needed Help
 Much of the determination for whether a charge description is a DUI or a marijuana case is done by comparing it to a master list. While we capture lots of possible ways to spell the various ways,
 we need some help in checking to make sure we got all of them.
+
+Needs active case missing field error prevention code.

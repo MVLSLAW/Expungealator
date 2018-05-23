@@ -3,31 +3,28 @@ __copyright__ = "Copyright 2017, Maryland Volunteer Lawyers Service"
 
 from Expungealator import Expungealator
 import sys, json
-jsontest = '[{"Description":"FUGITIVE FROM JUSTICE -- VA","Disposition":"DISMISSED","DispositionDate":"2005-04-22"},{"Description":"RESISTING ARREST","Disposition":"STET","DispositionDate":"1992-09-02"},{"Description":"MAL DEST PROP\/VALU LESS 300","Disposition":"STET","DispositionDate":"1992-09-02"}]'
+from Charge import Charge
+jsontest = '[{"Description":"FUGITIVE FROM JUSTICE -- VA","Disposition":"DISMISSED","DispositionDate":"2005-04-22","CJIS":"1 0233","Statute":"CR.5.601.(a)(1)"},{"Description":"THEFT","Disposition":"GUILTY","DispositionDate":"2017-09-02","CJIS":"1 1415","Statute":"CR.3.203"},{"Description":"MAL DEST PROP\/VALU LESS 300","Disposition":"STET","DispositionDate":"1992-09-02","CJIS":"4 3550","Statute":"CR.6.402"}]'
 
 chargearray = json.loads(jsontest)
 #chargearray = json.loads(sys.argv[1])
 
 Expunge = Expungealator()
+charges = []
 for charge in chargearray:
-    Expunge.addCharge(charge['Description'], charge['Disposition'], charge['DispositionDate'])
+    charges.append(Charge())
+    charges[-1].setDescription(charge['Description'])
+    charges[-1].setDisposition(charge['Disposition'])
+    charges[-1].setDispositionDate(charge['DispositionDate'])
+    charges[-1].setCJIS(charge['CJIS'])
+    charges[-1].setStatute(charge['Statute'])
 
 
-result = Expunge.checkExpungementRegular()
-comchargearray = Expunge.getAllCharges()
+Expunge.setChargeArray(charges)
+exstatus = Expunge.checkCaseExpungeability()
+chargearray = Expunge.chargearray
 
-returndata = {}
-returndata['Result'] = result
+for charge in chargearray:
+    print(charge.expungement_status + " " + str(charge.expungement_status_code))
 
-returndata['Charges'] = []
-
-for comcharge in comchargearray:
-    temp = {}
-    temp['ERCode'] = comcharge['ExpungementRegularCode']
-    temp['Description'] = comcharge['Description']
-    temp['Disposition'] = comcharge['Disposition']
-    returndata['Charges'].append(temp)
-
-print(json.dumps(returndata))
-
-
+print("Over All Expungeability: " + exstatus)

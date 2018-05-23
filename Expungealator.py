@@ -2,11 +2,11 @@ __author__ = 'Matthew Stubenberg'
 __copyright__ = "Copyright 2017, Maryland Volunteer Lawyers Service"
 import csv
 from datetime import datetime
-
+from Charge import Charge
 
 class Expungealator:
 
-    chargearray = []
+    chargearray = None
     dispolist = {}
     gooddispos = ['NP','NG','ACQUITTAL','JUVENILE','DISMISSED']
     case_expungeability_regular = 'UNKNOWN'
@@ -17,135 +17,140 @@ class Expungealator:
         reader = csv.DictReader(open('csv files/DispositionsList.csv'))
         for line in reader:
             self.dispolist[line['Raw']] =  line['Converted']
-    def addCharge(self,description,disposition,dispodate):
-        #Add charge to chargearray
 
-        #Convert Disposition into a Recognized One
-        disposition = disposition.upper()
-        description = description.upper()
-        tempdispo = self.convertDisposition(disposition) #Convert Disposition
-        if(tempdispo == False or disposition == None or disposition == ''):
-            tempdispo = 'UNKNOWN'
+    def setChargeArray(self,chargearray):
+        self.chargearray = chargearray
 
-        #Convert Date to date object
-        tempdate = self.try_parsing_date(dispodate)
-        if(tempdate == False):
-            #No Date Found
-            tempdate = None
+    def checkCaseExpungeability(self):
+        #Check charge specific eligability and save the expungeability status in the temp expungement array.
+        #We then check this array to see if there are any unit rule violations.
 
-        #Add charge to Charge array
-        tempcharge = {"Description":description,"Disposition":tempdispo,"DispositionDate":tempdate}
-        self.chargearray.append(tempcharge)
-
-    def convertDisposition(self,disposition):
-        #Search the disposition dictionary for the disposition it blongs to.
-        if disposition in self.dispolist:
-            return self.dispolist[disposition]
-        else:
-            return False
-    def checkExpungementRegular(self):
-        #For checking normal expungement
-        x=0
-        #Run through each charge and check it
+        temp_expungement_array = []
         for charge in self.chargearray:
-            return_charge = self.checkERCharge(charge)
-            self.chargearray[x] = return_charge #should overwrite the old value with the new charge var
-            x=x+1
-
-        #Add all charge expungeability results to an array
-        temp_er_array = []
-        for charge in self.chargearray:
-            temp_er_array.append(charge['ExpungementRegular'])
+            charge.setExpungementEligability(self.checkChargeExpungeability(charge))
+            temp_expungement_array.append(charge.expungement_status)
 
         #Search that array to find dooming results
-        if('NOT EXPUNGEABLE' in temp_er_array):
+        if('NOT EXPUNGEABLE' in temp_expungement_array):
             self.case_expungeability_regular = "NOT EXPUNGEABLE"
-        elif('UNKNOWN' in temp_er_array):
+        elif('UNKNOWN' in temp_expungement_array):
             self.case_expungeability_regular = "UNKNOWN"
-        elif ('NOT EXPUNGEABLE YET/MAYBE EXPUNGEABLE' in temp_er_array):
+        elif ('NOT EXPUNGEABLE YET/MAYBE EXPUNGEABLE' in temp_expungement_array):
             self.case_expungeability_regular = "NOT EXPUNGEABLE YET/MAYBE EXPUNGEABLE"
-        elif ('NOT EXPUNGEABLE YET' in temp_er_array):
+        elif ('NOT EXPUNGEABLE YET' in temp_expungement_array):
             self.case_expungeability_regular = "NOT EXPUNGEABLE YET"
-        elif ('MAYBE EXPUNGEABLE' in temp_er_array):
+        elif ('MAYBE EXPUNGEABLE' in temp_expungement_array):
             self.case_expungeability_regular = "MAYBE EXPUNGEABLE"
-        elif ('EXPUNGEABLE' in temp_er_array):
+        elif ('EXPUNGEABLE' in temp_expungement_array):
             self.case_expungeability_regular = "EXPUNGEABLE"
         else:
             self.case_expungeability_regular = "UNKNOWN" #Catch all
         return self.case_expungeability_regular
-    def checkERCharge(self,charge):
+
+    def checkChargeExpungeability(self,charge):
         #Set up Variables
         er = "NOT CHECKED"
-        excode = 0
-
+        excode = 999
+        expungement_values = {} #This is what's returned
+        '''
+        print(charge.disposition_date)
+        print(charge.description)
+        print(charge.cjis)
+        print(charge.disposition)
+        '''
         #Check if Disposition Date is NONE
-        if charge['DispositionDate'] == None:
-            charge['ExpungementRegular'] = "UNKNOWN"
-            charge['LiabilityWaiver'] = False
-            charge['ExpungementRegularCode'] = 112
-            return charge
+        if charge.disposition_date == None:
+            expungement_values['Expungement_Status'] = "UNKNOWN"
+            expungement_values['Liability_Waiver'] = False
+            expungement_values['Expungement_Status_Code'] = 112
+            return expungement_values
 
         #Liability Waiver
-        if self.days_between(charge['DispositionDate']) < 1095:
+        if self.days_between(charge.disposition_date) < 1095:
             libwaive = True
         else:
             libwaive = False
 
         # NP-NG-Acquittal
-        if charge['Disposition'] in self.gooddispos:
+        if charge.disposition in self.gooddispos:
             er = "EXPUNGEABLE"
             excode = 100
         #PBJ
-        elif charge['Disposition'] == 'PBJ':
+        elif charge.disposition == 'PBJ':
             #Check for DUI/DWI
-            if self.itemInCSV('dui',charge['Description']) == True:
+            if self.itemInCSV('dui',charge.description) == True:
                 er = "NOT EXPUNGEABLE"
                 excode = 101
-            elif self.itemInCSV('marijuana_less_than',charge['Description']) == True:
+            elif self.itemInCSV('marijuana_less_than',charge.description) == True:
                 er = "EXPUNGEABLE"
                 excode = 113
-            elif self.itemInCSV('marijuana_regular',charge['Description']) == True:
+            elif self.itemInCSV('marijuana_regular',charge.description) == True:
                 er = "MAYBE EXPUNGEABLE"
                 excode = 114
-            elif self.itemInCSV('cds_generic',charge['Description']) == True:
+            elif self.itemInCSV('cds_generic',charge.description) == True:
                 er = "MAYBE EXPUNGEABLE"
                 excode = 115
-            elif self.days_between(charge['DispositionDate']) < 1095:
+            elif self.days_between(charge.disposition_date) < 1095:
                 er = "NOT EXPUNGEABLE YET/MAYBE EXPUNGEABLE"
                 excode = 102
             else:
                 er = "MAYBE EXPUNGEABLE"
                 excode = 103
         #STET
-        elif charge['Disposition'] == 'STET':
-            if self.days_between(charge['DispositionDate']) < 1095:
+        elif charge.disposition == 'STET':
+            if self.days_between(charge.disposition_date) < 1095:
                 er = "NOT EXPUNGEABLE YET"
                 excode = 104
             else:
                 er = "EXPUNGEABLE"
                 excode = 105
         #GUILTY
-        elif charge['Disposition'] == 'GUILTY':
+        elif charge.disposition == 'GUILTY':
             #Check Nuisance Crime
-            if self.determineNuisance(charge['Description']) == True:
-                if self.days_between(charge['DispositionDate']) < 1095:
+            if self.determineNuisance(charge.description) == True:
+                if self.days_between(charge.disposition_date) < 1095:
                     er = "NOT EXPUNGEABLE YET"
                     excode = 106
                 else:
                     er = "EXPUNGEABLE"
                     excode = 107
             # Check Marijuana < 10
-            elif self.itemInCSV('marijuana_less_than',charge['Description']) == True:
+            elif self.itemInCSV('marijuana_less_than',charge.description) == True:
                 er = "EXPUNGEABLE"
                 excode = 108
             #Check Marijuana Reg
-            elif self.itemInCSV('marijuana_regular',charge['Description']) == True:
-                er = "MAYBE EXPUNGEABLE"
+            elif self.itemInCSV('marijuana_regular',charge.description) == True and self.days_between(charge.disposition_date) < 1460:
+                er = "NOT EXPUNGEABLE YET"
                 excode = 109
+            elif self.itemInCSV('marijuana_regular',charge.description) == True and self.days_between(charge.disposition_date) >= 1460:
+                er = "EXPUNGEABLE"
+                excode = 113
             #Check CDS Possession Generic (maybe marijuana)
-            elif self.itemInCSV('cds_generic', charge['Description']) == True:
+            elif self.itemInCSV('cds_generic', charge.description) == True:
                 er = "MAYBE EXPUNGEABLE"
                 excode = 110
+            #JRA 10 Years
+            elif charge.cjis != None and self.itemInCSV('jra_10',charge.cjis, "CJIS"):
+                #FOUND JRA CJIS Code
+                if self.days_between(charge.disposition_date) > 3650:
+                    #More than 10 years
+                    er = "MAYBE EXPUNGEABLE"
+                    excode = 114
+                else:
+                    #Less than 10 years
+                    er = "NOT EXPUNGEABLE YET"
+                    excode = 115
+            #JRA 15 Years
+            elif self.itemInCSV('jra_15',charge.cjis,"CJIS"):
+                #FOUND JRA CJIS Code
+                if self.days_between(charge.disposition_date) > 5475:
+                    #More than 15 years
+                    er = "MAYBE EXPUNGEABLE"
+                    excode = 116
+                else:
+                    #Less than 15 years
+                    er = "NOT EXPUNGEABLE YET"
+                    excode = 117
             #Regular Guilty
             else:
                 er = "NOT EXPUNGEABLE"
@@ -156,33 +161,23 @@ class Expungealator:
             excode = 112
 
         #Return the results which will be added to the charge in the chargearray
-        charge['ExpungementRegular'] = er
-        charge['LiabilityWaiver'] = libwaive
-        charge['ExpungementRegularCode'] = excode
-        return charge
-    def getChargeInfo(self,chargenum,item):
-        return self.chargearray[chargenum]
+        expungement_values['Expungement_Status'] = er
+        expungement_values['Liability_Waiver'] = libwaive
+        expungement_values['Expungement_Status_Code'] = excode
+        return expungement_values
+
     def getAllCharges(self):
         return self.chargearray
     def days_between(self,d1):
         #Primarily used for determining if 3 years have passed
         d2 = datetime.now().date()
         return abs((d2 - d1).days)
-    def try_parsing_date(self,text):
-        #Converting dates to propert YYYY-MM-DD format
-        if text == None:
-            return False
-        for fmt in ('%Y-%m-%d', '%d.%m.%Y', '%d/%m/%y','%m/%d/%Y'):
-            try:
-              return datetime.strptime(text, fmt).date()
-            except ValueError:
-                pass
-        return False #Means we couldn't convert the date
-    def itemInCSV(self,csvname,item):
+
+    def itemInCSV(self,csvname,item,column = 'Description'):
         #Check a single column csv for an item
         reader = csv.DictReader(open('csv files/' + csvname + '.csv'))
         for line in reader:
-            if(item.upper() == line['Description'].upper()):
+            if(item.upper() == line[column].upper()):
                 return True
         return False #Item was not in array
     def determineNuisance(self,description):
